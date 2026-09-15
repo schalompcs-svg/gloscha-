@@ -1,12 +1,16 @@
-name: Construire APK GPIAN MAX
+name: Construire APK GPIAN MAX - Design complet
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
+    name: APK Android GPIAN MAX
     runs-on: ubuntu-latest
 
     steps:
@@ -25,50 +29,263 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      - name: Vérifier le projet GPIAN
+        shell: bash
+        run: |
+          set -e
+
+          echo "=== FICHIERS PRINCIPAUX ==="
+
+          test -f index.html
+          test -f predications.html
+          test -f temoignages.html
+          test -f admin-zones.html
+          test -f alliance-prophetique.html
+          test -f capacitor.config.ts
+          test -f package.json
+
+          echo "OK : projet GPIAN détecté"
+
       - name: Installer les dépendances
         run: npm install
 
-      - name: Préparer le dossier web GPIAN
+      - name: Préparer TOUT le contenu web GPIAN
+        shell: bash
         run: |
+          set -e
+
           rm -rf www
           mkdir -p www
-          cp -r ./*.html www/
-          cp -r ./assets www/
-          cp -r ./api www/ 2>/dev/null || true
-          cp -f ./manifest.webmanifest www/ 2>/dev/null || true
-          cp -f ./service-worker.js www/ 2>/dev/null || true
-          echo "Contenu de www :"
-          find www -maxdepth 2 -type f | sort | head -100
 
-      - name: Configurer Capacitor
-        run: |
-          node -e "
-          const fs=require('fs');
-          const p='capacitor.config.ts';
-          let s=fs.readFileSync(p,'utf8');
-          s=s.replace(/webDir\s*:\s*['\"][^'\"]*['\"]/, \"webDir: 'www'\");
-          fs.writeFileSync(p,s);
-          console.log(fs.readFileSync(p,'utf8'));
-          "
+          echo "=== COPIE DES PAGES HTML ==="
 
-      - name: Ajouter Android
-        run: |
-          if [ ! -d android ]; then
-            npx cap add android
+          find . \
+            -maxdepth 1 \
+            -type f \
+            -name '*.html' \
+            -print0 | while IFS= read -r -d '' file; do
+              cp "$file" www/
+          done
+
+          echo "=== COPIE DES ASSETS ==="
+
+          if [ -d assets ]; then
+            cp -a assets www/assets
           fi
 
-      - name: Synchroniser Capacitor Android
-        run: npx cap sync android
+          echo "=== COPIE DES API / RESSOURCES WEB ==="
+
+          if [ -d api ]; then
+            cp -a api www/api
+          fi
+
+          echo "=== COPIE DES FICHIERS WEB RACINE ==="
+
+          for file in \
+            manifest.webmanifest \
+            manifest.json \
+            robots.txt \
+            favicon.ico \
+            favicon.png \
+            service-worker.js \
+            sw.js \
+            sitemap.xml; do
+
+            if [ -f "$file" ]; then
+              cp -f "$file" "www/$file"
+              echo "copié : $file"
+            fi
+          done
+
+          echo "=== RECHERCHE DES RESSOURCES ==="
+
+          find www -type f | sort > /tmp/gpian-www-files.txt
+
+          echo
+          echo "Nombre total de fichiers web :"
+          wc -l /tmp/gpian-www-files.txt
+
+          echo
+          echo "Premiers fichiers :"
+          head -100 /tmp/gpian-www-files.txt
+
+          echo
+          echo "=== TAILLE DU DOSSIER WWW ==="
+          du -sh www
+
+          echo
+          echo "=== TEST DES ASSETS ==="
+
+          test -d www/assets || {
+            echo "ERREUR : assets absent"
+            exit 1
+          }
+
+          echo "OK : assets présent"
+
+      - name: Vérifier les références locales du design
+        shell: bash
+        run: |
+          set -e
+
+          echo "=== ANALYSE HTML ==="
+
+          grep -RhoE \
+            '(src|href)=["'\''][^"'\'']+["'\'']' \
+            www/*.html 2>/dev/null \
+            | sort -u \
+            | head -200 || true
+
+          echo
+          echo "=== IMAGES ==="
+
+          find www/assets \
+            -type f \
+            \( -iname '*.png' \
+            -o -iname '*.jpg' \
+            -o -iname '*.jpeg' \
+            -o -iname '*.webp' \
+            -o -iname '*.svg' \
+            -o -iname '*.gif' \) \
+            | wc -l
+
+          echo
+          echo "=== CSS ==="
+
+          find www \
+            -type f \
+            \( -iname '*.css' \) \
+            | wc -l
+
+          echo
+          echo "=== JAVASCRIPT ==="
+
+          find www \
+            -type f \
+            \( -iname '*.js' \) \
+            | wc -l
+
+      - name: Configurer Capacitor pour le vrai dossier web
+        shell: bash
+        run: |
+          set -e
+
+          node <<'NODE'
+          const fs = require('fs');
+
+          const file = 'capacitor.config.ts';
+          let text = fs.readFileSync(file, 'utf8');
+
+          if (/webDir\s*:\s*['"][^'"]*['"]/.test(text)) {
+            text = text.replace(
+              /webDir\s*:\s*['"][^'"]*['"]/,
+              "webDir: 'www'"
+            );
+          } else {
+            text = text.replace(
+              /const config:\s*CapacitorConfig\s*=\s*\{/,
+              "const config: CapacitorConfig = {\n  webDir: 'www',"
+            );
+          }
+
+          fs.writeFileSync(file, text);
+
+          console.log('=== capacitor.config.ts ===');
+          console.log(text);
+          NODE
+
+      - name: Régénérer proprement le projet Android
+        shell: bash
+        run: |
+          set -e
+
+          echo "Suppression du dossier Android UNIQUEMENT SUR LE RUNNER GITHUB"
+
+          rm -rf android
+
+          echo "Ajout Android Capacitor..."
+
+          npx cap add android
+
+      - name: Synchroniser tout le design GPIAN
+        shell: bash
+        run: |
+          set -e
+
+          npx cap sync android
+
+          echo
+          echo "=== VERIFICATION DES ASSETS ANDROID ==="
+
+          test -f android/app/src/main/assets/public/index.html || {
+            echo "ERREUR : index.html absent de l'application Android"
+            exit 1
+          }
+
+          echo "OK : index.html présent"
+
+          if [ -d android/app/src/main/assets/public/assets ]; then
+            echo "OK : assets présents dans Android"
+          else
+            echo "ERREUR : assets absents de l'application Android"
+            exit 1
+          fi
+
+          echo
+          echo "=== CONTENU ANDROID WEB ==="
+
+          find android/app/src/main/assets/public \
+            -maxdepth 2 \
+            -type f \
+            | sort \
+            | head -150
+
+      - name: Vérifier le manifeste Android
+        shell: bash
+        run: |
+          set -e
+
+          test -f android/app/src/main/AndroidManifest.xml
+
+          echo "=== AndroidManifest.xml ==="
+          sed -n '1,220p' android/app/src/main/AndroidManifest.xml
 
       - name: Construire APK debug
         working-directory: android
+        shell: bash
         run: |
+          set -e
+
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+
+          ./gradlew assembleDebug \
+            --no-daemon \
+            --stacktrace
+
+      - name: Vérifier APK généré
+        shell: bash
+        run: |
+          set -e
+
+          APK="android/app/build/outputs/apk/debug/app-debug.apk"
+
+          test -f "$APK" || {
+            echo "ERREUR : APK non généré"
+            exit 1
+          }
+
+          echo "============================================"
+          echo "APK GPIAN MAX GÉNÉRÉ"
+          echo "============================================"
+
+          ls -lh "$APK"
+
+          sha256sum "$APK"
 
       - name: Publier APK GPIAN MAX
         uses: actions/upload-artifact@v4
         with:
-          name: GPIAN-MAX-APK
+          name: GPIAN-MAX-APK-DESIGN-COMPLET
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+          retention-days: 30
