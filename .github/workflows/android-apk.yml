@@ -1,0 +1,74 @@
+name: Construire APK GPIAN MAX
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupérer GPIAN MAX
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Installer les dépendances
+        run: npm install
+
+      - name: Préparer le dossier web GPIAN
+        run: |
+          rm -rf www
+          mkdir -p www
+          cp -r ./*.html www/
+          cp -r ./assets www/
+          cp -r ./api www/ 2>/dev/null || true
+          cp -f ./manifest.webmanifest www/ 2>/dev/null || true
+          cp -f ./service-worker.js www/ 2>/dev/null || true
+          echo "Contenu de www :"
+          find www -maxdepth 2 -type f | sort | head -100
+
+      - name: Configurer Capacitor
+        run: |
+          node -e "
+          const fs=require('fs');
+          const p='capacitor.config.ts';
+          let s=fs.readFileSync(p,'utf8');
+          s=s.replace(/webDir\s*:\s*['\"][^'\"]*['\"]/, \"webDir: 'www'\");
+          fs.writeFileSync(p,s);
+          console.log(fs.readFileSync(p,'utf8'));
+          "
+
+      - name: Ajouter Android
+        run: |
+          if [ ! -d android ]; then
+            npx cap add android
+          fi
+
+      - name: Synchroniser Capacitor Android
+        run: npx cap sync android
+
+      - name: Construire APK debug
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Publier APK GPIAN MAX
+        uses: actions/upload-artifact@v4
+        with:
+          name: GPIAN-MAX-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

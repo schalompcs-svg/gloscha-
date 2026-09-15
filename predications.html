@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="theme-color" content="#061426">
+<meta name="description" content="Prédications — Églises International de l’Arche de Noé (GPIAN)">
+<link rel="stylesheet" href="style.css"><link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<title>Prédications — GPIAN</title>
+<style>
+body{background:#f4f6f9}.gp-hero{background:linear-gradient(135deg,#061426,#173d63);color:white;text-align:center;padding:70px 20px}.gp-hero h1{font-size:clamp(42px,9vw,76px);margin:15px 0;font-weight:900}.gp-hero p{max-width:750px;margin:auto;font-size:18px;line-height:1.7;color:#dce5ef}.gp-wrap{width:min(1100px,92%);margin:auto}.gp-search{margin:-28px auto 45px}.gp-search input{width:100%;padding:20px;border:0;border-radius:18px;font-size:17px;box-shadow:0 12px 35px #0002;box-sizing:border-box}.gp-list{display:grid;gap:30px;padding-bottom:70px}.gp-card{background:white;border-radius:24px;overflow:hidden;box-shadow:0 10px 35px #0002}.gp-head{padding:30px;border-bottom:1px solid #eee}.gp-num{color:#c99a3d;font-weight:bold;letter-spacing:3px}.gp-title{font-size:clamp(30px,6vw,48px);color:#061426;margin:12px 0;font-weight:900}.gp-meta{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.gp-tag{background:#eef3f8;color:#173d63;padding:7px 10px;border-radius:999px;font-size:13px;font-weight:700}.gp-date{color:#687386}.gp-body{padding:30px}.gp-text{white-space:pre-wrap;font-size:18px;line-height:1.9}.gp-photos{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:30px}.gp-photos img{width:100%;height:260px;object-fit:cover;border-radius:16px}.gp-empty{text-align:center;background:white;padding:65px 20px;border-radius:24px}.gp-loading{text-align:center;padding:50px}.jesus-trigger{text-align:center;padding:65px 20px 25px;color:#888;font-size:11px;letter-spacing:4px;cursor:pointer}.jesus-trigger a{color:inherit;text-decoration:none}
+</style>
+<script src="assets/gpian-api.js"></script></head>
+<body>
+<div class="announcement">✦ JÉSUS-CHRIST EST SEIGNEUR — ÉGLISES INTERNATIONAL DE L’ARCHE DE NOÉ (GPIAN)</div>
+<header class="site-header"><div class="container nav"><a class="brand" href="index.html"><img class="brand-logo" src="assets/logo-app.png" alt="Logo Arche de Noé"><span><span class="brand-title">ÉGLISES INTERNATIONAL • GPIAN</span><span class="brand-sub">ARCHE DE NOÉ</span></span></a><button class="mobile-toggle" aria-label="Menu">☰</button><nav class="navlinks"><a href="index.html">ACCUEIL</a><a href="predications.html">PRÉDICATIONS</a><a href="sites.html">NOS ÉGLISES</a><a href="alliance-prophetique.html">ALLIANCE PROPHÉTIQUE</a><a href="evenements.html">ÉVÉNEMENTS</a><a href="temoignages.html">TÉMOIGNAGES</a><a href="contact.html">CONTACT</a><a href="eglise.html">À PROPOS</a><a class="don" href="alliance-prophetique.html#paiement">FAIRE UN DON ♡</a></nav></div></header>
+<div class="gp-hero"><div class="gp-wrap"><div>✝ L’ARCHE DE NOÉ • GPIAN</div><h1>PRÉDICATIONS</h1><p>Messages, enseignements et paroles pour fortifier la foi et conduire les cœurs vers Jésus-Christ.</p></div></div>
+<main class="gp-wrap"><div class="gp-search"><input id="gp-search" placeholder="🔎 Rechercher une prédication ou un thème..." oninput="afficherPredications()"></div><section id="publications" class="gp-list"><div class="gp-loading">⏳ Chargement des prédications...</div></section></main>
+<div class="jesus-trigger"><a href="admin-predications.html">✝ JÉSUS</a></div>
+<script>
+const PREDICATION_INITIALE={id:'veillee-aout-2026',titre:'🔥 1ère VEILLÉE DU MOIS D’AOÛT 2026',texte:'Message prophétique\n\nOrateur : Prophète Lucien KININNON\n\nIntroduction : Matthieu 7:7\n\nThème : Dieu a déjà écrit ton scénario !\n\nTexte principal : Matthieu 27:3-7',theme:'Dieu a déjà écrit ton scénario !',orateur:'Prophète Lucien KININNON',introduction:'Matthieu 7:7',verset:'Matthieu 27:3-7',date:'2026-08-01',photos:[{url:'assets/veillee.jpg',legend:'1ère veillée du mois d’août 2026'}]};
+let toutes=[];
+function esc(x){return String(x??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
+function norm(x){return String(x??'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
+async function charger(){
+  let remote=[],zonePreach=[];
+  try{const r=await gpianFetch('get-predications',{cache:'no-store'});const d=await r.json();if(d.ok&&Array.isArray(d.predications))remote=d.predications}catch(e){console.warn('predications',e)}
+  try{const r=await gpianFetch('get-zone-content?type=preaching',{cache:'no-store'});const d=await r.json();zonePreach=(d.items||[]).map(x=>({id:x.id,titre:x.title,texte:x.content,theme:x.meta,orateur:x.author,date:x.date,photos:x.photos||[],zone:x.zone}))}catch(e){console.warn('zone preaching',e)}
+  const local=(()=>{try{return JSON.parse(localStorage.getItem('gpian_predications')||'[]')}catch(e){return[]}})();
+  const map=new Map([[PREDICATION_INITIALE.id,PREDICATION_INITIALE]]);
+  [...remote,...zonePreach,...local].forEach(x=>{if(x&&x.id)map.set(String(x.id),x)});
+  toutes=[...map.values()].sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+  afficherPredications();
+}
+function afficherPredications(){
+ const z=document.getElementById('publications'),q=norm(document.getElementById('gp-search').value);
+ const p=toutes.filter(x=>norm([x.titre,x.texte,x.theme,x.orateur,x.verset].join(' ')).includes(q));
+ if(!p.length){z.innerHTML='<div class="gp-empty"><div style="font-size:55px">📖</div><h2>Aucune prédication disponible</h2><p>Les nouvelles prédications apparaîtront ici.</p></div>';return}
+ z.innerHTML=p.map((x,i)=>{const photos=Array.isArray(x.photos)?x.photos:[];return `<article class="gp-card"><div class="gp-head"><div class="gp-num">PRÉDICATION ${String(i+1).padStart(2,'0')}</div><h2 class="gp-title">${esc(x.titre)}</h2><div class="gp-meta">${x.theme?`<span class="gp-tag">THÈME : ${esc(x.theme)}</span>`:''}${x.orateur?`<span class="gp-tag">ORATEUR : ${esc(x.orateur)}</span>`:''}${x.verset?`<span class="gp-tag">TEXTE : ${esc(x.verset)}</span>`:''}</div><div class="gp-date">📅 ${esc(x.date||'')} ${x.zone?` • ZONE ${esc(x.zone)}`:''}</div></div><div class="gp-body"><div class="gp-text">${esc(x.texte||'')}</div>${photos.length?`<div class="gp-photos">${photos.map(a=>`<figure><img src="${esc(a.url||a.data||'')}" alt="${esc(a.legend||'')}">${a.legend?`<figcaption>${esc(a.legend)}</figcaption>`:''}</figure>`).join('')}</div>`:''}</div></article>`}).join('');
+}
+charger();
+document.querySelector('.mobile-toggle')?.addEventListener('click',()=>document.querySelector('.navlinks').classList.toggle('open'));
+</script>
+</body></html>
