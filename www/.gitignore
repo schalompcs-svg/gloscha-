@@ -1,0 +1,22 @@
+.env.local
+.env.local.backup
+*.backup
+*.sauvegarde
+*.avant-jesus
+*.securite-*
+node_modules/
+.DS_Store
+
+*.backup2
+
+# Local Netlify folder
+.netlify
+
+node_modules/
+.env
+.env.*
+!.env.example
+.netlify/
+android/.gradle/
+android/build/
+android/app/build/
