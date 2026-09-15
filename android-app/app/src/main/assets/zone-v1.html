@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GPIAN — Espace Zone</title>
+<style>
+body{font-family:Arial;margin:0;background:#f5f5f5;color:#111}
+header{background:#111;color:#fff;padding:18px}
+main{max-width:800px;margin:auto;padding:15px}
+.card{background:#fff;border-radius:14px;padding:18px;margin:15px 0;box-shadow:0 3px 15px #0001}
+input,textarea,button{width:100%;box-sizing:border-box;padding:12px;margin:6px 0;border-radius:9px;border:1px solid #ccc}
+button{background:#111;color:white;font-weight:bold}
+.hide{display:none}
+</style>
+</head>
+<body>
+<header><h1>GPIAN — ESPACE ZONE</h1></header>
+<main>
+<section id="login" class="card">
+<h2>Connexion de votre zone</h2>
+<input id="user" placeholder="Identifiant">
+<input id="pass" type="password" placeholder="Mot de passe">
+<button onclick="login()">CONNEXION</button>
+<p id="msg"></p>
+</section>
+
+<section id="zone" class="hide">
+<div class="card">
+<h2 id="title">🙏 Témoignage</h2>
+<p>Les témoignages sont publiés directement sur GPIAN avec l'origine de la zone.</p>
+<input id="auteur" placeholder="Nom — facultatif">
+<input id="titre" placeholder="Titre du témoignage">
+<textarea id="texte" rows="10" placeholder="Votre témoignage"></textarea>
+<button onclick="publish()">🙏 PUBLIER LE TÉMOIGNAGE</button>
+<p id="pub"></p>
+</div>
+
+<div class="card">
+<h2>📲 Autres contenus</h2>
+<p>Prédication, compte rendu, photo, vidéo, audio, annonce ou information : envoyez la proposition à l'administration GPIAN.</p>
+<input id="wtype" placeholder="Type de contenu">
+<input id="wtitre" placeholder="Titre">
+<textarea id="wmsg" rows="6" placeholder="Description / message"></textarea>
+<button onclick="sendWhatsApp()">📲 ENVOYER À L'ADMINISTRATION WHATSAPP</button>
+</div>
+
+<button onclick="logout()">Déconnexion</button>
+</section>
+</main>
+
+<script>
+let currentZone="";
+async function api(url,opt={}) {
+ const r=await fetch(url,{credentials:"include",...opt});
+ return r.json();
+}
+
+async function login(){
+ const r=await api("/.netlify/functions/gpian-auth-v1/login",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({
+   type:"zone",
+   user:user.value,
+   password:pass.value
+  })
+ });
+ if(r.ok){
+  currentZone=r.zone;
+  loginSectionHide();
+  title.textContent="🙏 Témoignage — Zone "+r.zone;
+ }else msg.textContent=r.error||"Connexion refusée";
+}
+
+function loginSectionHide(){
+ document.getElementById("login").classList.add("hide");
+ document.getElementById("zone").classList.remove("hide");
+}
+
+async function publish(){
+ const r=await api("/.netlify/functions/gpian-temoignages-v1",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({
+   auteur:auteur.value,
+   titre:titre.value,
+   texte:texte.value
+  })
+ });
+ pub.textContent=r.ok?"✓ Témoignage publié sur GPIAN":"✗ "+(r.error||"Erreur");
+}
+
+async function sendWhatsApp(){
+ const r=await api("/.netlify/functions/gpian-whatsapp-v1",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({
+   zone:"Zone "+currentZone,
+   type:wtype.value,
+   titre:wtitre.value,
+   message:wmsg.value
+  })
+ });
+ if(r.whatsapp) location.href=r.whatsapp;
+}
+
+async function logout(){
+ await api("/.netlify/functions/gpian-auth-v1/logout");
+ location.reload();
+}
+</script>
+</body>
+</html>

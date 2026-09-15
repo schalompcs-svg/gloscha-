@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">GPIAN</string>
+    <string name="title_activity_main">GPIAN</string>
+    <string name="package_name">org.gpian.archedenoe</string>
+    <string name="custom_url_scheme">org.gpian.archedenoe</string>
+</resources>

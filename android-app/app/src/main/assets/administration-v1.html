@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GPIAN — Administration V1</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f5f5f5;margin:0;color:#171717}
+header{background:#111;color:#fff;padding:18px}
+main{max-width:1000px;margin:auto;padding:15px}
+.card{background:#fff;border-radius:14px;padding:18px;margin:14px 0;box-shadow:0 3px 15px #0001}
+input,textarea,select,button{width:100%;box-sizing:border-box;padding:12px;margin:6px 0;border-radius:9px;border:1px solid #ccc}
+button{background:#111;color:#fff;font-weight:bold;cursor:pointer}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.hide{display:none}
+.ok{padding:10px;background:#e6ffe9;border-radius:8px}
+.err{padding:10px;background:#ffe6e6;border-radius:8px}
+.zone{border:1px solid #ddd;border-radius:10px;padding:12px}
+</style>
+</head>
+<body>
+<header><h1>GPIAN — ADMINISTRATION</h1><p>Administration globale • Sécurité • Publications</p></header>
+<main>
+
+<section id="login" class="card">
+<h2>🔐 Connexion administrateur</h2>
+<input id="user" placeholder="Identifiant">
+<input id="pass" type="password" placeholder="Mot de passe">
+<button onclick="login()">CONNEXION</button>
+<div id="loginMsg"></div>
+</section>
+
+<section id="panel" class="hide">
+
+<div class="card">
+<h2>⚙️ Comptes & sécurité</h2>
+<p>Les mots de passe sont modifiés ici et stockés sous forme de hash côté serveur.</p>
+
+<h3>👑 Administrateur principal</h3>
+<input id="adminUser" placeholder="Identifiant administrateur">
+<input id="adminPass" type="password" placeholder="Nouveau mot de passe — laisser vide pour conserver">
+
+<div class="grid">
+<div class="zone"><h3>🅰️ Zone A</h3><input id="userA" placeholder="Identifiant"><input id="passA" type="password" placeholder="Nouveau mot de passe"><label><input id="enabledA" type="checkbox"> Activée</label></div>
+<div class="zone"><h3>🅱️ Zone B</h3><input id="userB" placeholder="Identifiant"><input id="passB" type="password" placeholder="Nouveau mot de passe"><label><input id="enabledB" type="checkbox"> Activée</label></div>
+<div class="zone"><h3>©️ Zone C</h3><input id="userC" placeholder="Identifiant"><input id="passC" type="password" placeholder="Nouveau mot de passe"><label><input id="enabledC" type="checkbox"> Activée</label></div>
+<div class="zone"><h3>🅳 Zone D</h3><input id="userD" placeholder="Identifiant"><input id="passD" type="password" placeholder="Nouveau mot de passe"><label><input id="enabledD" type="checkbox"> Activée</label></div>
+</div>
+<button onclick="saveAccounts()">💾 ENREGISTRER LES COMPTES</button>
+<div id="accountMsg"></div>
+</div>
+
+<div class="card">
+<h2>🚀 Mise à jour rapide</h2>
+<select id="type">
+<option value="actualite">Actualité</option>
+<option value="predication">Prédication</option>
+<option value="temoignage">Témoignage</option>
+<option value="annonce">Annonce</option>
+<option value="evenement">Événement</option>
+<option value="antv">Information ANTV</option>
+<option value="photo">Photo</option>
+<option value="video">Vidéo</option>
+<option value="texte">Texte</option>
+</select>
+<input id="titre" placeholder="Titre">
+<textarea id="contenu" rows="8" placeholder="Contenu"></textarea>
+<input id="mediaUrl" placeholder="URL du média — facultatif">
+<button onclick="publish()">🚀 PUBLIER</button>
+<div id="pubMsg"></div>
+</div>
+
+<div class="card">
+<h2>📲 Soumission WhatsApp</h2>
+<p>Destination : administration GPIAN.</p>
+<input id="wtype" placeholder="Type">
+<input id="wtitre" placeholder="Titre">
+<textarea id="wmsg" rows="5" placeholder="Message"></textarea>
+<button onclick="whatsapp()">OUVRIR WHATSAPP</button>
+</div>
+
+<button onclick="logout()">Déconnexion</button>
+
+</section>
+</main>
+
+<script>
+async function api(url,opt={}) {
+ const r=await fetch(url,{credentials:"include",...opt});
+ return r.json();
+}
+
+async function login(){
+ const r=await api("/.netlify/functions/gpian-auth-v1/login",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({
+   type:"admin",
+   user:document.getElementById("user").value,
+   password:document.getElementById("pass").value
+  })
+ });
+ if(r.ok){
+  document.getElementById("login").classList.add("hide");
+  document.getElementById("panel").classList.remove("hide");
+  loadAccounts();
+ }else{
+  document.getElementById("loginMsg").className="err";
+  document.getElementById("loginMsg").textContent=r.error||"Connexion refusée";
+ }
+}
+
+async function loadAccounts(){
+ const r=await api("/.netlify/functions/gpian-auth-v1/settings");
+ if(!r.ok)return;
+ adminUser.value=r.admin.user;
+ for(const z of ["A","B","C","D"]){
+  document.getElementById("user"+z).value=r.zones[z]?.user||"";
+  document.getElementById("enabled"+z).checked=!!r.zones[z]?.enabled;
+ }
+}
+
+async function saveAccounts(){
+ const zones={};
+ for(const z of ["A","B","C","D"]){
+  zones[z]={
+   user:document.getElementById("user"+z).value,
+   password:document.getElementById("pass"+z).value,
+   enabled:document.getElementById("enabled"+z).checked
+  };
+ }
+ const r=await api("/.netlify/functions/gpian-auth-v1/settings",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({
+   admin:{
+    user:adminUser.value,
+    password:adminPass.value
+   },
+   zones
+  })
+ });
+ accountMsg.className=r.ok?"ok":"err";
+ accountMsg.textContent=r.ok?"✓ Comptes enregistrés":"✗ "+(r.error||"Erreur");
+}
+
+async function publish(){
+ const r=await api("/.netlify/functions/gpian-quick-update-v1",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({
+   type:type.value,
+   titre:titre.value,
+   contenu:contenu.value,
+   mediaUrl:mediaUrl.value
+  })
+ });
+ pubMsg.className=r.ok?"ok":"err";
+ pubMsg.textContent=r.ok?"✓ Publication enregistrée":"✗ "+(r.error||"Erreur");
+}
+
+async function whatsapp(){
+ const r=await api("/.netlify/functions/gpian-whatsapp-v1",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({
+   type:wtype.value,
+   titre:wtitre.value,
+   message:wmsg.value
+  })
+ });
+ if(r.whatsapp) location.href=r.whatsapp;
+}
+
+async function logout(){
+ await api("/.netlify/functions/gpian-auth-v1/logout");
+ location.reload();
+}
+</script>
+</body>
+</html>

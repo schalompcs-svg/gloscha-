@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Administration — Prédications</title>
+<link rel="stylesheet" href="style.css">
+<style>
+body{background:#061426;color:#fff;font-family:Arial,sans-serif}
+.admin{max-width:900px;margin:30px auto;padding:20px}
+.box{background:#fff;color:#111;border-radius:18px;padding:25px}
+input,textarea,button{width:100%;box-sizing:border-box;padding:14px;margin:8px 0;border-radius:10px;border:1px solid #ccc;font-size:16px}
+textarea{min-height:500px;resize:vertical}
+button{background:#061426;color:#fff;font-weight:bold;cursor:pointer}
+#photos-preview{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+#photos-preview img{width:100%;height:150px;object-fit:cover;border-radius:10px}
+
+/* ===== MODULE PHOTOS RESPONSABLES ===== */
+#responsable-select{
+  width:100%;
+  box-sizing:border-box;
+  padding:14px;
+  margin:8px 0;
+  border-radius:10px;
+  border:1px solid #ccc;
+  font-size:16px;
+  background:white;
+}
+
+#responsable-photo-preview{
+  min-height:20px;
+}
+
+.responsable-admin-preview{
+  width:120px;
+  height:120px;
+  object-fit:cover;
+  border-radius:8px;
+  border:3px solid #061426;
+  display:block;
+}
+
+.responsable-admin-card{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  background:white;
+  padding:10px;
+  border-radius:12px;
+  margin:8px 0;
+  border:1px solid #ddd;
+}
+
+.responsable-admin-card img{
+  width:60px;
+  height:60px;
+  object-fit:cover;
+  border-radius:8px;
+}
+
+.responsable-admin-card strong{
+  display:block;
+}
+
+</style>
+</head>
+<body>
+
+<div class="admin">
+<div class="box">
+
+<h1>🔐 Administration — Prédications</h1>
+
+<div id="login">
+<h2>Connexion</h2>
+<input id="username" type="text" placeholder="Nom d'utilisateur">
+<input id="password" type="password" placeholder="Mot de passe">
+<button onclick="connexion()">SE CONNECTER</button>
+<p id="login-status"></p>
+</div>
+
+<div id="panel" style="display:none">
+
+<h2>Nouvelle prédication</h2>
+
+<h2 style="margin-top:35px">👥 Photos des responsables</h2>
+
+<div id="responsables-module" style="background:#f4f7fb;color:#111;padding:20px;border-radius:16px;margin-top:15px">
+
+<label><b>Responsable</b></label>
+<select id="responsable-select">
+<option value="">— Choisir un responsable —</option>
+</select>
+
+<label><b>📷 Photo du responsable</b></label>
+<input id="responsable-photo" type="file" accept="image/*">
+
+<div id="responsable-photo-preview" style="margin:15px 0"></div>
+
+<button type="button" onclick="enregistrerPhotoResponsable()">
+💾 ENREGISTRER LA PHOTO
+</button>
+
+<p id="responsable-status"></p>
+
+<div id="responsables-liste" style="margin-top:20px"></div>
+
+</div>
+
+
+<input id="titre" type="text" placeholder="Titre de la prédication">
+
+<textarea id="texte" placeholder="Collez ici toute la prédication : thème, versets, enseignement, conclusion..."></textarea>
+
+<label><b>📷 Ajouter des photos</b></label>
+<input id="photos" type="file" accept="image/*" multiple>
+
+<div id="photos-preview"></div>
+
+<button onclick="importer()">📥 IMPORTER</button>
+<button onclick="publier()">📖 PUBLIER</button>
+<button onclick="deconnexion()">🔒 SE DÉCONNECTER</button>
+
+<p id="status"></p>
+
+</div>
+</div>
+</div>
+
+
+<script>
+let responsablesData = [];
+let photoResponsableSelectionnee = null;
+
+async function chargerResponsables(){
+  const select = document.getElementById("responsable-select");
+  if(!select) return;
+
+  try{
+    const r = await fetch("assets/pasteurs/responsables.json");
+    responsablesData = await r.json();
+
+    responsablesData.forEach((responsable, index)=>{
+      const option = document.createElement("option");
+      option.value = responsable.nom;
+      option.textContent = `${index + 1}. ${responsable.nom}`;
+      select.appendChild(option);
+    });
+
+    afficherResponsables();
+  }catch(e){
+    document.getElementById("responsable-status").textContent =
+      "❌ Impossible de charger les responsables.";
+  }
+}
+
+document.addEventListener("DOMContentLoaded", ()=>{
+  chargerResponsables();
+
+  const input = document.getElementById("responsable-photo");
+
+  if(input){
+    input.addEventListener("change", function(){
+      const file = this.files[0];
+
+      if(!file) return;
+
+      if(!file.type.startsWith("image/")){
+        document.getElementById("responsable-status").textContent =
+          "❌ Veuillez sélectionner une image.";
+        return;
+      }
+
+      photoResponsableSelectionnee = file;
+
+      const url = URL.createObjectURL(file);
+
+      document.getElementById("responsable-photo-preview").innerHTML = `
+        <p><b>Aperçu :</b></p>
+        <img class="responsable-admin-preview"
+             src="${url}"
+             alt="Aperçu photo responsable">
+      `;
+
+      document.getElementById("responsable-status").textContent =
+        "✅ Photo sélectionnée.";
+    });
+  }
+});
+
+function afficherResponsables(){
+  const liste = document.getElementById("responsables-liste");
+
+  if(!liste) return;
+
+  liste.innerHTML = `
+    <h3>📋 Responsables enregistrés</h3>
+    ${responsablesData.map((r,index)=>`
+      <div class="responsable-admin-card">
+        <img
+          src="assets/pasteurs/${slugResponsable(r.nom)}.jpg"
+          alt=""
+          onerror="this.style.display='none'">
+        <div>
+          <strong>${index + 1}. ${r.nom}</strong>
+          <small>Photo : ${slugResponsable(r.nom)}.jpg</small>
+        </div>
+      </div>
+    `).join("")}
+  `;
+}
+
+function slugResponsable(nom){
+  return nom
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g,"")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g,"-")
+    .replace(/^-+|-+$/g,"");
+}
+
+async function enregistrerPhotoResponsable(){
+  const nom = document.getElementById("responsable-select").value;
+  const status = document.getElementById("responsable-status");
+
+  if(!nom){
+    status.textContent = "❌ Choisissez d'abord un responsable.";
+    return;
+  }
+
+  if(!photoResponsableSelectionnee){
+    status.textContent = "❌ Choisissez d'abord une photo.";
+    return;
+  }
+
+  status.textContent = "🔐 Préparation sécurisée de la photo...";
+
+  try{
+    const file = photoResponsableSelectionnee;
+
+    const image = new Image();
+
+    image.onload = async function(){
+
+      const max = 800;
+
+      let width = image.width;
+      let height = image.height;
+
+      if(width > height && width > max){
+        height = Math.round(height * max / width);
+        width = max;
+      }else if(height > max){
+        width = Math.round(width * max / height);
+        height = max;
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(image,0,0,width,height);
+
+      const base64 = canvas.toDataURL("image/jpeg",0.88);
+
+      status.textContent = "📤 Envoi sécurisé vers le serveur...";
+
+      const r = await fetch("/.netlify/functions/admin-upload-responsable",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+          nom:nom,
+          image:base64,
+          type:"image/jpeg"
+        })
+      });
+
+      const data = await r.json();
+
+      if(data.ok){
+
+        status.innerHTML =
+          "✅ <b>Photo enregistrée avec succès !</b><br>" +
+          "👤 Responsable : <b>" + nom + "</b><br>" +
+          "🌐 Elle sera automatiquement affichée dans « NOS ÉGLISES ».";
+
+        photoResponsableSelectionnee = null;
+        document.getElementById("responsable-photo").value = "";
+        document.getElementById("responsable-photo-preview").innerHTML = "";
+
+        afficherResponsables();
+
+      }else{
+
+        status.textContent =
+          "❌ " + (data.error || "Impossible d'enregistrer la photo.");
+      }
+    };
+
+    image.onerror = function(){
+      status.textContent = "❌ Impossible de lire cette image.";
+    };
+
+    image.src = URL.createObjectURL(file);
+
+  }catch(e){
+
+    console.error(e);
+
+    status.textContent =
+      "❌ Serveur indisponible ou session administrateur expirée.";
+  }
+}
+</script>
+
+<script>
+/*
+ IMPORTANT :
+ Le vrai contrôle d'accès devra être déplacé côté serveur.
+ Cette interface ne contient volontairement aucun vrai mot de passe.
+*/
+
+async function connexion(){
+  const username=document.getElementById("username").value.trim();
+  const password=document.getElementById("password").value;
+  const status=document.getElementById("login-status");
+
+  status.textContent="🔐 Vérification...";
+
+  try{
+    const r=await fetch("/.netlify/functions/admin-login",{
+      method:"POST",
+      credentials:"include",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({username,password})
+    });
+
+    const data=await r.json();
+
+    if(data.ok){
+      document.getElementById("login").style.display="none";
+      document.getElementById("panel").style.display="block";
+      status.textContent="";
+    }else{
+      status.textContent="❌ Identifiants incorrects.";
+    }
+  }catch(e){
+    status.textContent="❌ Serveur indisponible.";
+  }
+}
+
+async function importer(){
+  const status = document.getElementById("status");
+  const titre = document.getElementById("titre")?.value.trim() || "";
+  const texte = document.getElementById("texte")?.value.trim() || "";
+
+  if (!titre || !texte) {
+    status.textContent = "⚠️ Ajoute un titre et le contenu de la prédication.";
+    return;
+  }
+
+  status.textContent = "📤 Importation vers le serveur...";
+
+  try {
+    const r = await fetch("/.netlify/functions/admin-publish-predication", {
+      method: "POST",
+      credentials: "include",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        titre,
+        contenu: texte,
+        date: new Date().toISOString()
+      })
+    });
+
+    const data = await r.json();
+
+    if (r.ok && data.ok) {
+      status.innerHTML = "✅ <b>Prédication importée avec succès !</b>";
+    } else {
+      status.textContent = "❌ " + (data.error || "Importation impossible.");
+    }
+  } catch (e) {
+    console.error(e);
+    status.textContent = "❌ Serveur indisponible.";
+  }
+}
+
+async function publier(){
+  const status = document.getElementById("status");
+  const titre = document.getElementById("titre")?.value.trim() || "";
+  const texte = document.getElementById("texte")?.value.trim() || "";
+
+  if (!titre || !texte) {
+    status.textContent = "⚠️ Ajoute un titre et le contenu de la prédication.";
+    return;
+  }
+
+  status.textContent = "📖 Publication en cours...";
+
+  try {
+    const r = await fetch("/.netlify/functions/admin-publish-predication", {
+      method: "POST",
+      credentials: "include",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        titre,
+        contenu: texte,
+        date: new Date().toISOString()
+      })
+    });
+
+    const data = await r.json();
+
+    if (r.ok && data.ok) {
+      status.innerHTML = "✅ <b>Prédication publiée automatiquement !</b>";
+    } else {
+      status.textContent = "❌ " + (data.error || "Publication impossible.");
+    }
+  } catch (e) {
+    console.error(e);
+    status.textContent = "❌ Serveur indisponible.";
+  }
+}
+
+function deconnexion(){
+  document.getElementById("panel").style.display="none";
+  document.getElementById("login").style.display="block";
+}
+</script>
+
+
+<section id="gestion-affectations" style="margin:40px auto;max-width:900px;padding:25px;border-radius:20px;background:#111;color:white">
+  <h2>🔄 Gestion des affectations</h2>
+  <p>Modifier le responsable d'une église après une affectation.</p>
+
+  <label>Église</label>
+  <select id="aff-eglise" style="width:100%;padding:12px;margin:8px 0 15px">
+    <option value="">Chargement des églises...</option>
+  </select>
+
+  <label>Nom du responsable</label>
+  <input id="aff-nom" style="width:100%;padding:12px;margin:8px 0 15px">
+
+  <label>Fonction</label>
+  <select id="aff-fonction" style="width:100%;padding:12px;margin:8px 0 15px">
+    <option>Pasteur</option>
+    <option>Évangéliste</option>
+    <option>Responsable</option>
+  </select>
+
+  <label>Téléphone</label>
+  <input id="aff-telephone" type="tel" style="width:100%;padding:12px;margin:8px 0 15px">
+
+  <label>Adresse</label>
+  <input id="aff-adresse" style="width:100%;padding:12px;margin:8px 0 15px">
+
+  <button type="button" onclick="enregistrerAffectation()"
+    style="padding:14px 22px;border:0;border-radius:12px;font-weight:bold;cursor:pointer">
+    💾 ENREGISTRER L'AFFECTATION
+  </button>
+
+  <p id="aff-status"></p>
+</section>
+
+<script>
+const AFF_EGLISES = [
+  ["01","Arche de Noé Abomey","Sokegbe Norbert Samson"],
+  ["02","Arche de Noé Bohicon","Amadoudja Patrice Simon Pierre"],
+  ["03","Arche de Noé Ayou","Dagbe Aholou Antoine Paul"],
+  ["04","Arche de Noé Allada","Segue Ariane Berthe Anne Urielle"],
+  ["05","Arche de Noé Dogbo","Ountin Romaric Freddy Délé Nathanaël"],
+  ["06","Arche de Noé Azové","Agonhossou Taïrou Salomon"],
+  ["07","Arche de Noé Parakou","Tchoclossou Comlan Victor Simon Pierre"],
+  ["08","Arche de Noé Lokossa","Togan Houeke Donatien Joseph"],
+  ["09","Arche de Noé Natitingou","Badou Samuel"],
+  ["10","Arche de Noé Peniel (Dan)","Agoundo Célestine Elisée"],
+  ["11","Arche de Noé Agonli","Hounnouve Sossou Francis Simon Pierre"],
+  ["12","Arche de Noé Kpanwiyan","Gbaguidi Casimir Néhémie"],
+  ["13","Arche de Noé Porto-Novo","Goudjanou Geneviève Marthe"],
+  ["14","Arche de Noé d’Avrankou","Djidonou Caleb"],
+  ["15","Arche de Noé Hêvié","Soglada Priscille"],
+  ["16","Arche de Noé Agla","Assogba Gislaine Rebecca"],
+  ["16 BIS","Arche de Noé Cococodji","Azankpo Japhet"],
+  ["17","Arche de Noé Djekpota","Okou Sephora"],
+  ["18","Arche de Noé Pahou","Adjovi Emmanuel"],
+  ["19","Arche de Noé Gbodjè Womey 2","Hlekpe Samuel"]
+];
+
+const sel = document.getElementById("aff-eglise");
+
+AFF_EGLISES.forEach(([num,eglise,nom]) => {
+  const o=document.createElement("option");
+  o.value=eglise;
+  o.textContent=num+" — "+eglise+" — "+nom;
+  o.dataset.nom=nom;
+  sel.appendChild(o);
+});
+
+sel.addEventListener("change",()=>{
+  const o=sel.options[sel.selectedIndex];
+  document.getElementById("aff-nom").value=o?.dataset.nom||"";
+});
+
+async function enregistrerAffectation(){
+  const status=document.getElementById("aff-status");
+
+  const data={
+    eglise:sel.value,
+    nom:document.getElementById("aff-nom").value.trim(),
+    fonction:document.getElementById("aff-fonction").value,
+    telephone:document.getElementById("aff-telephone").value.trim(),
+    adresse:document.getElementById("aff-adresse").value.trim()
+  };
+
+  if(!data.eglise || !data.nom){
+    status.textContent="❌ Sélectionne une église et indique le nom.";
+    return;
+  }
+
+  status.textContent="⏳ Enregistrement...";
+
+  try{
+    const r=await fetch("/.netlify/functions/responsables-admin",{
+      method:"POST",
+      credentials:"include",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(data)
+    });
+
+    const result=await r.json();
+
+    status.textContent=result.ok
+      ?"✅ Affectation enregistrée !"
+      :"❌ "+(result.error||"Erreur.");
+  }catch(e){
+    console.error(e);
+    status.textContent="❌ Impossible de contacter le serveur.";
+  }
+}
+</script>
+
+</body>
+</html>

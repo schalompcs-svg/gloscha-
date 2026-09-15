@@ -1,0 +1,21 @@
+{
+  "name": "GPIAN — Églises International de l’Arche de Noé",
+  "short_name": "GPIAN",
+  "description": "JÉSUS-CHRIST EST SEIGNEUR",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#04101f",
+  "theme_color": "#04101f",
+  "icons": [
+    {
+      "src": "/assets/logo_circle.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
