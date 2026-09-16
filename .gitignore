@@ -11,12 +11,3 @@ node_modules/
 
 # Local Netlify folder
 .netlify
-
-node_modules/
-.env
-.env.*
-!.env.example
-.netlify/
-android/.gradle/
-android/build/
-android/app/build/

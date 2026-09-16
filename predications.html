@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<meta name="theme-color" content="#061426">
+<meta name="theme-color" content="#26215C">
 <meta name="description" content="Prédications — Églises International de l’Arche de Noé (GPIAN)">
 <link rel="stylesheet" href="style.css"><link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
@@ -15,7 +15,7 @@ body{background:#f4f6f9}.gp-hero{background:linear-gradient(135deg,#061426,#173d
 <script src="assets/gpian-api.js"></script></head>
 <body>
 <div class="announcement">✦ JÉSUS-CHRIST EST SEIGNEUR — ÉGLISES INTERNATIONAL DE L’ARCHE DE NOÉ (GPIAN)</div>
-<header class="site-header"><div class="container nav"><a class="brand" href="index.html"><img class="brand-logo" src="assets/logo-app.png" alt="Logo Arche de Noé"><span><span class="brand-title">ÉGLISES INTERNATIONAL • GPIAN</span><span class="brand-sub">ARCHE DE NOÉ</span></span></a><button class="mobile-toggle" aria-label="Menu">☰</button><nav class="navlinks"><a href="index.html">ACCUEIL</a><a href="predications.html">PRÉDICATIONS</a><a href="sites.html">NOS ÉGLISES</a><a href="alliance-prophetique.html">ALLIANCE PROPHÉTIQUE</a><a href="evenements.html">ÉVÉNEMENTS</a><a href="temoignages.html">TÉMOIGNAGES</a><a href="contact.html">CONTACT</a><a href="eglise.html">À PROPOS</a><a class="don" href="alliance-prophetique.html#paiement">FAIRE UN DON ♡</a></nav></div></header>
+<header class="site-header"><div class="container nav"><a class="brand" href="index.html"><img class="brand-logo" src="assets/logo-app.png" alt="Logo Arche de Noé"><span><span class="brand-title">ÉGLISES INTERNATIONAL • GPIAN</span><span class="brand-sub">ARCHE DE NOÉ</span></span></a><button class="mobile-toggle" aria-label="Menu">☰</button><nav class="navlinks"><a data-nav="index.html" href="index.html">ACCUEIL</a><a data-nav="predications.html" href="predications.html" class="active">PRÉDICATIONS</a><a data-nav="sites.html" href="sites.html">NOS ÉGLISES</a><a data-nav="alliance-prophetique.html" href="alliance-prophetique.html">ALLIANCE PROPHÉTIQUE</a><a data-nav="evenements.html" href="evenements.html">ÉVÉNEMENTS</a><a data-nav="temoignages.html" href="temoignages.html">TÉMOIGNAGES</a><a data-nav="comptes-rendus.html" href="comptes-rendus.html">COMPTES RENDUS</a><a data-nav="tv.html" href="tv.html">TV</a><a data-nav="contact.html" href="contact.html">CONTACT</a><a data-nav="dons.html" href="dons.html">FAIRE UN DON ♡</a><a data-nav="eglise.html" href="eglise.html">À PROPOS</a></nav></div></header>
 <div class="gp-hero"><div class="gp-wrap"><div>✝ L’ARCHE DE NOÉ • GPIAN</div><h1>PRÉDICATIONS</h1><p>Messages, enseignements et paroles pour fortifier la foi et conduire les cœurs vers Jésus-Christ.</p></div></div>
 <main class="gp-wrap"><div class="gp-search"><input id="gp-search" placeholder="🔎 Rechercher une prédication ou un thème..." oninput="afficherPredications()"></div><section id="publications" class="gp-list"><div class="gp-loading">⏳ Chargement des prédications...</div></section></main>
 <div class="jesus-trigger"><a href="admin-predications.html">✝ JÉSUS</a></div>
@@ -25,12 +25,13 @@ let toutes=[];
 function esc(x){return String(x??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
 function norm(x){return String(x??'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
 async function charger(){
-  let remote=[],zonePreach=[];
-  try{const r=await gpianFetch('get-predications',{cache:'no-store'});const d=await r.json();if(d.ok&&Array.isArray(d.predications))remote=d.predications}catch(e){console.warn('predications',e)}
-  try{const r=await gpianFetch('get-zone-content?type=preaching',{cache:'no-store'});const d=await r.json();zonePreach=(d.items||[]).map(x=>({id:x.id,titre:x.title,texte:x.content,theme:x.meta,orateur:x.author,date:x.date,photos:x.photos||[],zone:x.zone}))}catch(e){console.warn('zone preaching',e)}
+  let remote=[];
+  try{const r=await gpianFetch('get-predications',{cache:'no-store'});const d=await r.json();if(d.ok&&Array.isArray(d.predications))remote=d.predications}catch(e){console.warn('Prédications générales indisponibles',e)}
+  let zoneRemote=[];
+  try{const r=await gpianFetch('get-zone-content?type=preaching',{cache:'no-store'});const d=await r.json();if(d.ok&&Array.isArray(d.items))zoneRemote=d.items.map(x=>({id:'zone-'+x.id,titre:x.title,texte:x.content,theme:x.meta||'',orateur:x.author||'',verset:'',date:x.date,photos:x.photos||[],zone:x.zone,emetteur:x.emetteur,source:'zone'}))}catch(e){console.warn('Prédications de zones indisponibles',e)}
   const local=(()=>{try{return JSON.parse(localStorage.getItem('gpian_predications')||'[]')}catch(e){return[]}})();
   const map=new Map([[PREDICATION_INITIALE.id,PREDICATION_INITIALE]]);
-  [...remote,...zonePreach,...local].forEach(x=>{if(x&&x.id)map.set(String(x.id),x)});
+  [...remote,...zoneRemote,...local].forEach(x=>{if(x&&x.id)map.set(String(x.id),x)});
   toutes=[...map.values()].sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
   afficherPredications();
 }
@@ -38,7 +39,7 @@ function afficherPredications(){
  const z=document.getElementById('publications'),q=norm(document.getElementById('gp-search').value);
  const p=toutes.filter(x=>norm([x.titre,x.texte,x.theme,x.orateur,x.verset].join(' ')).includes(q));
  if(!p.length){z.innerHTML='<div class="gp-empty"><div style="font-size:55px">📖</div><h2>Aucune prédication disponible</h2><p>Les nouvelles prédications apparaîtront ici.</p></div>';return}
- z.innerHTML=p.map((x,i)=>{const photos=Array.isArray(x.photos)?x.photos:[];return `<article class="gp-card"><div class="gp-head"><div class="gp-num">PRÉDICATION ${String(i+1).padStart(2,'0')}</div><h2 class="gp-title">${esc(x.titre)}</h2><div class="gp-meta">${x.theme?`<span class="gp-tag">THÈME : ${esc(x.theme)}</span>`:''}${x.orateur?`<span class="gp-tag">ORATEUR : ${esc(x.orateur)}</span>`:''}${x.verset?`<span class="gp-tag">TEXTE : ${esc(x.verset)}</span>`:''}</div><div class="gp-date">📅 ${esc(x.date||'')} ${x.zone?` • ZONE ${esc(x.zone)}`:''}</div></div><div class="gp-body"><div class="gp-text">${esc(x.texte||'')}</div>${photos.length?`<div class="gp-photos">${photos.map(a=>`<figure><img src="${esc(a.url||a.data||'')}" alt="${esc(a.legend||'')}">${a.legend?`<figcaption>${esc(a.legend)}</figcaption>`:''}</figure>`).join('')}</div>`:''}</div></article>`}).join('');
+ z.innerHTML=p.map((x,i)=>{const photos=Array.isArray(x.photos)?x.photos:[];return `<article class="gp-card"><div class="gp-head"><div class="gp-num">PRÉDICATION ${String(i+1).padStart(2,'0')}</div><h2 class="gp-title">${esc(x.titre)}</h2><div class="gp-meta">${x.theme?`<span class="gp-tag">THÈME : ${esc(x.theme)}</span>`:''}${x.orateur?`<span class="gp-tag">ORATEUR : ${esc(x.orateur)}</span>`:''}${x.verset?`<span class="gp-tag">TEXTE : ${esc(x.verset)}</span>`:''}${x.zone?`<span class="gp-tag">ZONE ${esc(x.zone)}</span>`:''}${x.emetteur?`<span class="gp-tag">ÉMETTEUR : ${esc(x.emetteur)}</span>`:''}</div><div class="gp-date">📅 ${esc(x.date||'')}</div></div><div class="gp-body"><div class="gp-text">${esc(x.texte||'')}</div>${photos.length?`<div class="gp-photos">${photos.map(a=>`<figure><img src="${esc(a.url||a.data||'')}" alt="${esc(a.legend||'')}">${a.legend?`<figcaption>${esc(a.legend)}</figcaption>`:''}</figure>`).join('')}</div>`:''}</div></article>`}).join('');
 }
 charger();
 document.querySelector('.mobile-toggle')?.addEventListener('click',()=>document.querySelector('.navlinks').classList.toggle('open'));

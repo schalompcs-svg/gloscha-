@@ -3,8 +3,8 @@
   "short_name": "GPIAN",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#061426",
-  "theme_color": "#061426",
+  "background_color": "#26215C",
+  "theme_color": "#26215C",
   "icons": [
     {
       "src": "assets/icon-192.png",

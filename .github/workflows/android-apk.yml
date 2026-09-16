@@ -1,9 +1,8 @@
-name: Construire APK GPIAN - Version corrigee exacte
+name: Construire APK GPIAN MAX - toutes modifications
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -11,14 +10,13 @@ permissions:
 
 jobs:
   build:
-    name: APK Android GPIAN version corrigee
+    name: APK GPIAN MAX complet
     runs-on: ubuntu-latest
-
     steps:
-      - name: Recuperer le projet GPIAN
+      - name: Récupérer le projet
         uses: actions/checkout@v4
 
-      - name: Installer Node.js
+      - name: Installer Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -30,79 +28,35 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Verifier la vraie version GPIAN corrigee
-        shell: bash
+      - name: Vérifier la version complète
         run: |
           set -e
+          node scripts/validate-gpian.js
+          test -f www/admin5.html
+          test -f www/assets/gpian-runtime.js
+          test -f netlify/functions/admin5-api.js
+          test -f www/assets/pasteurs/zones-affectations.json
+          node --check netlify/functions/admin5-api.js
 
-          echo "=== VERIFICATION DOSSIER WWW ==="
-
-          test -d www
-          test -f www/index.html
-          test -f www/predications.html
-          test -f www/sites.html
-          test -f www/temoignages.html
-          test -f www/comptes-rendus.html
-          test -f www/alliance-prophetique.html
-          test -f www/tv.html
-          test -f www/style.css
-          test -f capacitor.config.ts
-          test -f package.json
-
-          echo "OK : version GPIAN corrigee trouvee dans www"
-
-          echo "=== CONTROLE DESIGN ==="
-          grep -Ril "GPIAN\|Arche de Noé\|Arche de Noe" www | head -30
-
-          echo "=== CONTROLE NAVIGATION ==="
-          grep -Ril "PRÉDICATIONS\|PREDICATIONS\|NOS ÉGLISES\|TÉMOIGNAGES\|COMPTES RENDUS\|ALLIANCE PROPHÉTIQUE" www | head -30
-
-          echo "=== TAILLE WWW ==="
-          du -sh www
-
-      - name: Installer les dependances
+      - name: Installer les dépendances
         run: npm install
 
-      - name: Verifier Capacitor
-        shell: bash
+      - name: Vérifier Capacitor
         run: |
-          set -e
+          node -e "const fs=require('fs'); const s=fs.readFileSync('capacitor.config.ts','utf8'); if(!s.includes(\"webDir: 'www'\")) process.exit(1); console.log('webDir www OK')"
 
-          node -e "
-          const fs = require('fs');
-          const text = fs.readFileSync('capacitor.config.ts', 'utf8');
-          if (!text.includes(\"webDir: 'www'\")) {
-            console.error('ERREUR : webDir ne pointe pas vers www');
-            process.exit(1);
-          }
-          console.log('OK : Capacitor utilise www');
-          "
-
-      - name: Supprimer uniquement Android sur le runner
-        shell: bash
+      - name: Créer Android sur le runner
         run: |
-          set -e
           rm -rf android
           npx cap add android
 
-      - name: Synchroniser la vraie version web corrigee
-        shell: bash
+      - name: Synchroniser www vers Android
         run: |
-          set -e
-
           npx cap sync android
-
           test -f android/app/src/main/assets/public/index.html
-          test -f android/app/src/main/assets/public/style.css
-          test -d android/app/src/main/assets/public/assets
-
-          echo "OK : contenu web corrige copie dans Android"
-
-          echo "=== VERIFICATION LOGOS ==="
-          find android/app/src/main/assets/public/assets \
-            -type f \
-            \( -iname '*logo*' -o -iname '*icon*' \) \
-            | head -30
+          test -f android/app/src/main/assets/public/admin5.html
+          test -f android/app/src/main/assets/public/assets/gpian-runtime.js
+          test -f android/app/src/main/assets/public/assets/pasteurs/zones-affectations.json
 
       - name: Construire APK debug
         working-directory: android
@@ -110,9 +64,9 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: Publier APK GPIAN
+      - name: Publier APK
         uses: actions/upload-artifact@v4
         with:
-          name: GPIAN-APK-VERSION-CORRIGEE-EXACTE
+          name: GPIAN-MAX-APK-TOUTES-MODIFICATIONS
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

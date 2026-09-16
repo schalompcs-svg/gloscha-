@@ -1,0 +1,14 @@
+GPIAN MAX — VERSION COMPLETE
+
+Cette version intègre :
+- Admin 5 central
+- Design bleu/violet/rose avec contraste renforcé
+- Runtime de contenu/design pilotable par Admin 5
+- Pages officielles : Accueil, Prédications, Nos églises, Alliance prophétique, Événements, Témoignages, Comptes rendus, TV, Contact, Faire un don, À propos
+- Redirection des anciennes rubriques Actualités/Médias/Ministères
+- Affectations nationales A1/B2/C3/D issues du tableau fourni
+- Recherche et filtre sur Nos églises
+- Sauvegarde/restauration Admin 5
+- Historique Admin 5
+- Suppression Admin 5 des prédications et publications de zones
+- Préservation des données et des assets existants
