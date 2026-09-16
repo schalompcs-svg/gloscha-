@@ -1,7 +1,7 @@
 module.exports = {
   packagerConfig: {
     name: 'GPIAN',
-    executableName: 'GPIAN',
+    executableName: 'gpian',
     asar: true
   },
   makers: [

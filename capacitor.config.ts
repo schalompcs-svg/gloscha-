@@ -1,3 +1,7 @@
-import type { CapacitorConfig } from '@capacitor/cli';
-const config: CapacitorConfig = { appId: 'org.gpian.archedenoe', appName: 'GPIAN', webDir: 'www' };
-export default config;
+const config = {
+  appId: 'org.gpian.archedenoe',
+  appName: 'GPIAN',
+  webDir: 'www'
+};
+
+module.exports = config;
