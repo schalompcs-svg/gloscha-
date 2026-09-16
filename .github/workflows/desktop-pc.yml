@@ -1,0 +1,54 @@
+name: GPIAN PC Windows Linux macOS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-pc:
+    name: Construire GPIAN PC
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Récupérer le projet
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Vérifier GPIAN MAX
+        run: |
+          node scripts/validate-gpian.js
+          test -f www/index.html
+          test -f www/admin5.html
+          test -f www/assets/gpian-runtime.js
+          test -f www/assets/pasteurs/zones-affectations.json
+          test -f electron/main.js
+          test -f forge.config.js
+
+      - name: Installer les dépendances
+        run: npm install
+
+      - name: Construire la version PC
+        run: npm run pc:make
+
+      - name: Publier la version PC
+        uses: actions/upload-artifact@v4
+        with:
+          name: GPIAN-PC-${{ matrix.os }}
+          path: out/make/**
+          if-no-files-found: error

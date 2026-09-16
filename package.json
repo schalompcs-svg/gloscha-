@@ -1,17 +1,21 @@
 {
-  "name": "gpian-mpeian",
+  "name": "gpian",
   "version": "1.0.0",
   "private": true,
   "dependencies": {
+    "@netlify/blobs": "^10.7.13",
     "@capacitor/android": "^8.5.2",
     "@capacitor/cli": "^8.5.2",
-    "@capacitor/core": "^8.5.2",
-    "@netlify/blobs": "^10.7.13"
+    "@capacitor/core": "^8.5.2"
   },
-  "description": "",
-  "main": "index.js",
+  "description": "Églises International de l’Arche de Noé — GPIAN",
+  "main": "electron/main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "validate": "node scripts/validate-gpian.js",
+    "pc:start": "electron .",
+    "pc:package": "electron-forge package",
+    "pc:make": "electron-forge make"
   },
   "repository": {
     "type": "git",
@@ -20,12 +24,17 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module",
+  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/schalompcs-svg/gloscha-/issues"
   },
   "homepage": "https://github.com/schalompcs-svg/gloscha-#readme",
+  "productName": "GPIAN",
   "devDependencies": {
-    "typescript": "^7.0.2"
+    "electron": "^38.1.0",
+    "@electron-forge/cli": "^7.9.0",
+    "@electron-forge/maker-squirrel": "^7.9.0",
+    "@electron-forge/maker-zip": "^7.9.0",
+    "@electron-forge/maker-deb": "^7.9.0"
   }
 }
